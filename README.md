@@ -2,9 +2,12 @@
 
 Author：Lin Sinan
 
-Org：ZUEL
+Organization：ZUEL
 
-title：The Application and Research of Naive Bayes Classifier on Face Image Classification
+Title：The Application and Research of Naive Bayes Classifier on Face Image Classification
+
+
+
 
 
 **目前跟新代码为实验一和实验二，其余代码会陆续整理出来**
