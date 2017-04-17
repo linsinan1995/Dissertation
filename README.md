@@ -1,6 +1,9 @@
 # Dissertation
+
 Author：Lin Sinan
+
 Org：ZUEL
+
 title：The Application and Research of Naive Bayes Classifier on Face Image Classification
 
 
