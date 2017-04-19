@@ -70,7 +70,7 @@ def Kfold_data(train_index, test_index, x, y):
     return train_x, train_y, test_x, test_y
 
 # 数据读取
-def load_data(type=0,train_kfold=10):
+def load_data(type=0,train_kfold=0):
     #0：yale,1:ar,2:orl,3:olivetti,4:imm
     if int(type) == 0:
         for j in range(15):
@@ -162,15 +162,15 @@ def load_data(type=0,train_kfold=10):
 
 
 # 降维实验
-types = 1
+types = 4
 x,y = load_data(type=types)
 model = GaussianNB()
 # model = LogisticRegression(penalty='l2')
-scores = 1 - cross_val_score(model, x, y, cv=10)
+scores = 1 - cross_val_score(model, x, y, cv=5)
 
 # model = LogisticRegression()
 print "未降维分类准确率： %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2)
-l = [1, 3,  5,  7, 10, 13, 15, 17, 20 ,23 , 25, 27, 30, 33, 35, 37, 40, 43, 45, 47, 50, 53, 55, 57, 60, 63, 65, 67, 70, 73, 75, 77, 80,82,85,87,90,92,95,97,100,102,105,110,115,120,125,130,135,140]
+l = [1, 3,  5,  7, 10, 13, 15, 17, 20 ,23 , 25, 27, 30, 33, 35, 37, 40, 43, 45, 47, 50, 53, 55, 57, 60, 63, 65, 67, 70, 73, 75, 77, 80]#,82,85,87,90,92,95,97,100,102,105,110,115,120,125,130,135,140]
 lda_score = np.zeros(len(l))
 pca_score = np.zeros(len(l))
 MDS_score = np.zeros(len(l))
@@ -189,39 +189,39 @@ LLE_std = np.zeros(len(l))
 count = 0
 for i in l:
     # scores = cross_val_score(clf, iris.data, iris.target, cv=5)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.9)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.8)
 
 
     # pca
     pca = PCA(n_components=i).fit(x)
     x2 = pca.transform(x)
-    cv_pca = 1 - cross_val_score(model, x2, y, cv=10)
+    cv_pca = 1 - cross_val_score(model, x2, y, cv=5)
     pca_score[count] = cv_pca.mean()
     pca_std[count] = cv_pca.std()
 
     # MDS
     mds = manifold.MDS(n_components=i, eps=1e-10)
     x2 = mds.fit(x).embedding_
-    cv_MDS = 1 - cross_val_score(model, x2, y, cv=10)
+    cv_MDS = 1 - cross_val_score(model, x2, y, cv=5)
     MDS_score[count] = cv_MDS.mean()
     MDS_std[count] = cv_MDS.std()
 
     # Isomap
     x2 = manifold.Isomap(60, n_components=i).fit_transform(x)
-    cv_Isomap = 1 - cross_val_score(model, x2, y, cv=10)
+    cv_Isomap = 1 - cross_val_score(model, x2, y, cv=5)
     isomap_score[count] = cv_Isomap.mean()
     isomap_std[count] = cv_Isomap.std()
 
 
     # LLE
     x2 = LocallyLinearEmbedding(n_neighbors=60, n_components=i).fit_transform(x)
-    cv_LLE = 1 - cross_val_score(model, x2, y, cv=10)
+    cv_LLE = 1 - cross_val_score(model, x2, y, cv=5)
     LLE_score[count] = cv_LLE.mean()
     LLE_std[count] = cv_LLE.std()
 
     # lda
-    kf = KFold(n_splits=10)
-    cv_lda = np.zeros(10)
+    kf = KFold(n_splits=5)
+    cv_lda = np.zeros(5)
     count2 = 0
     index = np.array(random.sample(range(len(y)), len(y)))
     for train, test in kf.split(index):
@@ -238,7 +238,7 @@ for i in l:
     lda_score[count] = cv_lda.mean()
     lda_std[count] = cv_lda.std()
     # pls
-    cv_pls = np.zeros(10)
+    cv_pls = np.zeros(5)
     count2 = 0
     for train, test in kf.split(index):
         index_train = index[train]
@@ -303,7 +303,7 @@ import pandas as pd
 a=pd.DataFrame([lda_score,pca_score,MDS_score,isomap_score,pls_score,LLE_score,lda_std,pca_std,MDS_std,isomap_std,pls_std,LLE_std]).T
 a.columns = ['lda','pca','mds','isomap','pls','lle','slda','spca','smds','sisomap','spls','slle']
 a.index = l
-a.to_csv('C:\Users\hasee\Desktop\data_ar.csv')
+a.to_csv('C:\Users\hasee\Desktop\data_llm.csv')
     
     
     
