@@ -45,19 +45,20 @@ from sklearn.naive_bayes import GaussianNB
 import random
 from sklearn.model_selection import KFold
 from PIL import Image
+import cv2
 
 
 def ImageToMatrix(filename):
     # 读取图片
     im = Image.open(filename)
     # 显示图片
-#     im.show()
-    width,height = im.size
+    #     im.show()
+    width, height = im.size
     im = im.convert("L")
     data = im.getdata()
-    data = np.matrix(data,dtype='float')/255.0
-    #new_data = np.reshape(data,(width,height))
-    new_data = np.reshape(data,(height,width))
+    data = np.matrix(data, dtype='float') / 255.0
+    # new_data = np.reshape(data,(width,height))
+    new_data = np.reshape(data, (height, width))
     return new_data
 
 def Kfold_data(train_index, test_index, x, y):
@@ -65,11 +66,11 @@ def Kfold_data(train_index, test_index, x, y):
     train_y = y[train_index]
     test_x = x[test_index]
     test_y = y[test_index]
-
     return train_x, train_y, test_x, test_y
 
-def load_data(type=0,train_kfold=0):
-    #0：yale,1:ar,2:orl,3:olivetti,4:imm
+
+def load_data(type=0, _random=0):
+    # 0：yale,1:ar,2:orl,3:olivetti,4:imm
     if int(type) == 0:
         for j in range(15):
             for i in range(11):
@@ -141,29 +142,63 @@ def load_data(type=0,train_kfold=0):
         for i in range(40):
             for j in range(6):
                 y[i * 6 + j] = i + 1
-    if int(train_kfold) <=0 :
+    if int(_random) <= 0:
         index = np.array(random.sample(range(len(y)), len(y)))
         x = x[index]
         y = y[index]
         return x, y
     else:
-        index = np.array(random.sample(range(len(y)), len(y)))
-        test_index = index[0:round(len(y) / int(train_kfold))]
-        train_index = index[round(len(y) / int(train_kfold))::]
-        train_x = x[train_index]
-        train_y = y[train_index]
-        test_x = x[test_index]
-        test_y = y[test_index]
-        return train_x, train_y,test_x,test_y
+        return x, y
 
-def test_clf(clf,type=0,times=10):
+
+
+def rotate(type=0):
+    x, y = load_data(type, _random=1)
+    m = len(y) / len(np.unique(y))  # 每人照片数目
+    k = m
+    if type == 0:
+        rows, cols = [100, 100]
+    if type == 1:
+        rows, cols = [40, 50]
+    if type == 2:
+        rows, cols = [92, 112]
+    if type == 4:
+        rows, cols = [200, 200]
+    count = 0
+    # index2 = []
+    for i in np.unique(y):
+        index = np.where(y == i)
+        # index2.append(index[0][0:k])
+        for j in range(k):
+            count += 1
+            pic = x[index][j]
+            img = pic.reshape(rows, cols)
+            angel = np.random.rand(1) * 5 + 15
+            M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angel, 1)
+            dst = cv2.warpAffine(img, M, (cols, rows))
+            if count == 1:
+                new_x = dst.ravel()
+            else:
+                new_x = np.concatenate((new_x, dst.ravel()))
+    new_x = new_x.reshape(new_x.shape[0] / (rows * cols), rows * cols)
+    # index2 = np.array(index2).ravel()
+    new_X = np.concatenate((x, new_x))
+    new_Y = np.concatenate((y, y))
+
+    index = np.array(random.sample(range(len(new_Y)), len(new_Y)))
+    x = new_X[index]
+    y = new_Y[index]
+    return x, y
+
+
+def test_clf(clf, type=0, times=10):
     print u'分类器：', clf
-    x,y= load_data(type)
+    x, y = rotate(type)
     kf = KFold(n_splits=times)
     index = np.array(random.sample(range(len(y)), len(y)))
     scores = np.zeros(times)
     train_times = np.zeros(times)
-    datasets = ['Yale','AR','orl','oli','IMM']
+    datasets = ['Yale', 'AR', 'orl', 'oli', 'IMM']
     count = 0
     print u'%d折交叉检验开始，数据加载中，数据集为%s：' % (times, datasets[type])
     for train_index, test_index in kf.split(index):
@@ -186,9 +221,9 @@ def test_clf(clf,type=0,times=10):
         if hasattr(clf, 'C'):
             C_can = np.logspace(1, 3, 3)
             gamma_can = np.logspace(-3, 0, 3)
-            model = GridSearchCV(clf, param_grid={'C':C_can, 'gamma':gamma_can}, cv=5)
-            model.set_params(param_grid={'C':C_can , 'gamma':gamma_can})
-            m = C_can.size  * gamma_can.size
+            model = GridSearchCV(clf, param_grid={'C': C_can, 'gamma': gamma_can}, cv=5)
+            model.set_params(param_grid={'C': C_can, 'gamma': gamma_can})
+            m = C_can.size  # * gamma_can.size
         if hasattr(clf, 'max_depth'):
             max_depth_can = np.arange(5, 20)
             model = GridSearchCV(clf, param_grid={'max_depth': max_depth_can}, cv=5)
@@ -198,30 +233,27 @@ def test_clf(clf,type=0,times=10):
         model.fit(train_x, train_y)
         t_end = time()
         if str(clf).split('(')[0] != 'GaussianNB':
-            t_train = (t_end - t_start)/m
-            print u'基于灰度搜索5折交叉验证的训练时间为：%.3f秒/(5*%d)=%.3f秒' % ((t_end - t_start), m, t_train)
+            t_train = (t_end - t_start) / m
+            print u'基于灰度搜索5折交叉验证的训练时间为：%.3f秒/%d=%.3f秒' % ((t_end - t_start), m, t_train)
             print u'最优超参数为：', model.best_params_
         else:
             t_train = t_end - t_start
             print u'训练时间为：%.3f秒' % t_train
         y_hat = model.predict(test_x)
         acc = metrics.accuracy_score(test_y, y_hat)
-        scores[count-1] = acc
-        train_times[count-1] = t_train
+        scores[count - 1] = acc
+        train_times[count - 1] = t_train
         print u'测试集准确率：%.2f%%' % (100 * acc)
 
     name = str(clf).split('(')[0]
     index = name.find('Classifier')
     if index != -1:
-        name = name[:index]     # 去掉末尾的Classifier
+        name = name[:index]  # 去掉末尾的Classifier
     if name == 'SVC':
         name = 'SVM'
-    return train_times.mean(), 1-scores.mean(), name
-
+    return train_times.mean(), 1 - scores.mean(), name
 
 if __name__ == "__main__":
-
-
     print u'\n\n======================================\n分类器的比较：\n'
     clfs = (GaussianNB(),
             KNeighborsClassifier(),         # 19.737(0.282), 0.208, 86.03%
@@ -231,7 +263,7 @@ if __name__ == "__main__":
             )
     result = []
     # 选择数据集
-    data_type = 4
+    data_type = 1
     for clf in clfs:
         a = test_clf(clf,type=data_type)
         result.append(a)
@@ -261,9 +293,3 @@ if __name__ == "__main__":
     for label in ax.xaxis.get_ticklabels():
         label.set_fontsize(18)
     plt.show()
-
-# debug
-# xx=x[68]
-# xx.shape=[200,200]
-# MatrixToImage(xx).show()
-)
